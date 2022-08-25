@@ -1,95 +1,85 @@
 package skytheory.scenicsurvival.config;
 
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import it.unimi.dsi.fastutil.ints.IntSortedSet;
-import net.minecraft.world.DimensionType;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonSyntaxException;
+import com.google.gson.reflect.TypeToken;
+
 import net.minecraftforge.common.DimensionManager;
-import net.minecraftforge.common.config.ConfigElement;
-import net.minecraftforge.common.config.Configuration;
 import net.minecraftforge.fml.client.config.IConfigElement;
+import skytheory.scenicsurvival.ScenicSurvival;
 
 public class ScenicSurvivalConfig {
 
-	public static final String CATEGORY_BLOCK = "block";
-	public static final String CATEGORY_ENTITY = "entity";
+	public static final Map<Integer, String> DIMENSIONS = new HashMap<>();
+	public static final Map<Integer, ScenicSurvivalProperties> PROPERTIES = new HashMap<>();
+	public static final TypeToken<Map<Integer, ScenicSurvivalProperties.JsonAdapter>> TYPE_TOKEN = new TypeToken<Map<Integer, ScenicSurvivalProperties.JsonAdapter>>() {};
+	public static final Gson GSON = new GsonBuilder()
+			.setPrettyPrinting()
+			.create();
 
-	public static Configuration CONFIG;
+	public static File FILE;
 
-	public static final String DESC_ENABLE = "Enable prevent breaking block by explosion in this dimension.";
-	public static final String DESC_HEIGHT_MIN = "Minimum height to prevent breaking block by explosion.";
-	public static final String DESC_HEIGHT_MAX = "Maximum height to prevent breaking block by explosion.";
-	public static final String DESC_VILLAGER = "Enable prevent killing villager by mobs.";
-
-	public static final Map<Integer, ProtectRangeEntry> PROTECT_MAP = new HashMap<>();
-	public static boolean protectVillager;
+	public static void init(File file) {
+		FILE = file;
+		DIMENSIONS.clear();
+		PROPERTIES.clear();
+		DimensionManager.getRegisteredDimensions().forEach((type, set) -> {
+			set.forEach(i -> {
+				DIMENSIONS.put(i, type.getName());
+			});
+		});
+		read();
+		save();
+	}
 
 	public static List<IConfigElement> getConfigElements() {
 		List<IConfigElement> elements = new ArrayList<>();
-		Map<DimensionType, IntSortedSet> dimIdMap = DimensionManager.getRegisteredDimensions();
-		Map<Integer, String> dimNameMap = new HashMap<>();
-		dimIdMap.forEach((type, set) -> {
-			set.forEach(i -> {
-				dimNameMap.put(i, type.getName());
-			});
+		DIMENSIONS.forEach((id, name) -> {
+			ScenicSurvivalProperties prop = PROPERTIES.get(id);
+			prop.append(elements);
 		});
-		dimNameMap.forEach((id, name) -> {
-			// LangKeyを実装させたかったけれど、可変個数要素を動的に翻訳する方法が見つからなかったので取りやめ
-			elements.add(new ConfigElement(CONFIG.get(CATEGORY_BLOCK, String.format("Dim%d_Protect", id), id == 0 ? true : false, String.format("%s Dimension ID:%d, Name: %s", DESC_ENABLE, id, name))));
-			elements.add(new ConfigElement(CONFIG.get(CATEGORY_BLOCK, String.format("Dim%d_MinHeight", id), id == 0 ? 60 : 0, String.format("%s Dimension ID:%d, Name: %s", DESC_HEIGHT_MIN, id, name), 0, 255)));
-			elements.add(new ConfigElement(CONFIG.get(CATEGORY_BLOCK, String.format("Dim%d_MaxHeight", id), 255, String.format("%s Dimension ID:%d, Name: %s", DESC_HEIGHT_MAX, id, name), 0, 255)));
-		});
-
-		elements.add(new ConfigElement(CONFIG.get(CATEGORY_ENTITY, "ProtectVillager", true, DESC_VILLAGER)));
 
 		return elements;
 	}
 
-	public static void init(Configuration cfg) {
-		CONFIG = cfg;
-		CONFIG.load();
-		read();
-		if (cfg.hasChanged()) {
-			save();
-		}
-	}
-
 	public static void read() {
-		Map<DimensionType, IntSortedSet> dimIdMap = DimensionManager.getRegisteredDimensions();
-		Map<Integer, String> dimNameMap = new HashMap<>();
-		dimIdMap.forEach((type, set) -> {
-			set.forEach(i -> {
-				dimNameMap.put(i, type.getName());
-			});
-		});
-		PROTECT_MAP.clear();
-		dimNameMap.forEach((id, name) -> {
-			boolean isEnabled = CONFIG.getBoolean(String.format("Dim%d_Protect", id), CATEGORY_BLOCK, id == 0 ? true : false, String.format("%s Dimension ID:%d, Name: %s", DESC_ENABLE, id, name));
-			int min = CONFIG.getInt(String.format("Dim%d_MinHeight", id), CATEGORY_BLOCK, id == 0 ? 60 : 0, 0, 255, String.format("%s Dimension ID:%d, Name: %s", DESC_HEIGHT_MIN, id, name));
-			int max = CONFIG.getInt(String.format("Dim%d_MaxHeight", id), CATEGORY_BLOCK, 255, 0, 255, String.format("%s Dimension ID:%d, Name: %s", DESC_HEIGHT_MAX, id, name));
-			if (isEnabled) {
-				PROTECT_MAP.put(id, new ProtectRangeEntry(min, max));
+		try {
+			Map<Integer, ScenicSurvivalProperties.JsonAdapter> readedProperties = GSON.fromJson(new FileReader(FILE), TYPE_TOKEN.getType());
+			if (readedProperties != null) {
+				readedProperties.forEach((id, adapter) ->
+				PROPERTIES.put(id, ScenicSurvivalProperties.fromAdapter(id, DIMENSIONS.get(id), adapter))
+				);
+			}
+		} catch (IOException | IllegalStateException | JsonSyntaxException e) {
+			ScenicSurvival.LOGGER.error("Error reading configuration.", e);
+		}
+		DIMENSIONS.forEach((id, name) -> {
+			if (!PROPERTIES.containsKey(id)) {
+				ScenicSurvivalProperties prop = ScenicSurvivalProperties.getDefault(id, name);
+				PROPERTIES.put(id, prop);
 			}
 		});
-		protectVillager = CONFIG.getBoolean("ProtectVillager", CATEGORY_ENTITY, true, DESC_VILLAGER);
 	}
 
 	public static void save() {
-		CONFIG.save();
-	}
-
-
-	public static class ProtectRangeEntry {
-
-		public final int min;
-		public final int max;
-
-		private ProtectRangeEntry(int min, int max) {
-			this.min = min;
-			this.max = max;
+		try {
+			FileWriter writer = new FileWriter(FILE);
+			Map<Integer, ScenicSurvivalProperties.JsonAdapter> jsonMap = new HashMap<>();
+			PROPERTIES.forEach((id, prop) -> jsonMap.put(id, prop.toAdapter()));
+			writer.write(GSON.toJson(jsonMap, TYPE_TOKEN.getType()));
+			writer.close();
+		} catch (IOException e) {
+			ScenicSurvival.LOGGER.error("Error writing configuration.", e);
 		}
 	}
 }

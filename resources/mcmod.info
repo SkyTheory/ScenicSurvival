@@ -3,7 +3,7 @@
   "modid": "scenic_survival",
   "name": "Scenic Survival",
   "description": "This mod prevent mob blasting blocks on the ground, but not prevent spawn them. Still survival, and there is no need to spoil the landscape with torches anymore!",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "mcversion": "1.12.2",
   "url": "",
   "updateUrl": "",

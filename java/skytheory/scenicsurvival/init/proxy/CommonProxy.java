@@ -14,8 +14,7 @@ public class CommonProxy {
 
 	public void preInit(FMLPreInitializationEvent event) {
 		File directory = event.getModConfigurationDirectory();
-		Configuration config = new Configuration(new File(directory.getPath(), "ScenicSurvival.cfg"));
-		ScenicSurvivalConfig.init(config);
+		ScenicSurvivalConfig.init(new File(directory.getPath(), "ScenicSurvival.json"));
 	}
 
 	public void init(FMLInitializationEvent event) {

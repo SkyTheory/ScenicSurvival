@@ -12,10 +12,7 @@ public class ScenicSurvivalConfigScreen extends GuiConfig {
 
 	@Override
 	public void onGuiClosed() {
-		if (ScenicSurvivalConfig.CONFIG.hasChanged()) {
-			ScenicSurvivalConfig.save();
-			ScenicSurvivalConfig.read();
-		}
+		ScenicSurvivalConfig.save();
 		super.onGuiClosed();
 	}
 }

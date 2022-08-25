@@ -9,8 +9,9 @@ import net.minecraft.world.Explosion;
 import net.minecraft.world.World;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import skytheory.scenicsurvival.config.ScenicSurvivalConfig;
+import skytheory.scenicsurvival.config.ScenicSurvivalProperties;
 
-public class ExplosionEvent {
+public class ProtectBlockEvent {
 
 	// ブロックを保護する高度
 	public static int PRESERVE = 60;
@@ -21,12 +22,15 @@ public class ExplosionEvent {
 	public static void onExplosion(net.minecraftforge.event.world.ExplosionEvent.Detonate event) {
 		World world = event.getWorld();
 		int dim = world.provider.getDimension();
-		ScenicSurvivalConfig.ProtectRangeEntry entry = ScenicSurvivalConfig.PROTECT_MAP.get(dim);
-		if (entry != null) {
+		ScenicSurvivalProperties prop = ScenicSurvivalConfig.PROPERTIES.get(dim);
+		if (prop.protectBlockEnabled.getBoolean()) {
 			Explosion explosion = event.getExplosion();
 			Entity cause = explosion.getExplosivePlacedBy();
 			if (cause != null && !(cause instanceof EntityPlayer)) {
-				event.getAffectedBlocks().removeIf(b -> b.getY() >= entry.min && b.getY() <= entry.max);
+				event.getAffectedBlocks().removeIf(b ->
+				b.getY() >= prop.protectBlockMinHeight.getInt() &&
+				b.getY() <= prop.protectBlockMaxHeight.getInt()
+				);
 			}
 		}
 	}
