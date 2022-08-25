@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -22,6 +23,7 @@ public class ScenicSurvivalConfig {
 
 	public static final Map<Integer, String> DIMENSIONS = new HashMap<>();
 	public static final Map<Integer, ScenicSurvivalProperties> PROPERTIES = new HashMap<>();
+	public static List<Integer> ORDER;
 	public static final TypeToken<Map<Integer, ScenicSurvivalProperties.JsonAdapter>> TYPE_TOKEN = new TypeToken<Map<Integer, ScenicSurvivalProperties.JsonAdapter>>() {};
 	public static final Gson GSON = new GsonBuilder()
 			.setPrettyPrinting()
@@ -38,13 +40,14 @@ public class ScenicSurvivalConfig {
 				DIMENSIONS.put(i, type.getName());
 			});
 		});
+		ORDER = DIMENSIONS.keySet().stream().sorted().collect(Collectors.toList());
 		read();
 		save();
 	}
 
 	public static List<IConfigElement> getConfigElements() {
 		List<IConfigElement> elements = new ArrayList<>();
-		DIMENSIONS.forEach((id, name) -> {
+		ORDER.forEach(id ->{
 			ScenicSurvivalProperties prop = PROPERTIES.get(id);
 			prop.append(elements);
 		});
@@ -75,7 +78,7 @@ public class ScenicSurvivalConfig {
 		try {
 			FileWriter writer = new FileWriter(FILE);
 			Map<Integer, ScenicSurvivalProperties.JsonAdapter> jsonMap = new HashMap<>();
-			PROPERTIES.forEach((id, prop) -> jsonMap.put(id, prop.toAdapter()));
+			ORDER.forEach(id -> jsonMap.put(id, PROPERTIES.get(id).toAdapter()));
 			writer.write(GSON.toJson(jsonMap, TYPE_TOKEN.getType()));
 			writer.close();
 		} catch (IOException e) {

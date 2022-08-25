@@ -1,6 +1,8 @@
 package skytheory.scenicsurvival.config;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import net.minecraft.util.math.MathHelper;
 import net.minecraftforge.common.config.ConfigCategory;
@@ -29,7 +31,7 @@ public class ScenicSurvivalProperties {
 
 	public static ScenicSurvivalProperties getDefault(int id, String name) {
 		if (id == 0) {
-			return new ScenicSurvivalProperties(name, true, 60, 255, true, true, ScenicSurvivalHelper.getBiomeBlocks());
+			return new ScenicSurvivalProperties(name, true, 60, 255, true, true, ScenicSurvivalHelper.getTerrainBlocks());
 		}
 		return new ScenicSurvivalProperties(name, false, 0, 255, false, false, new String[0]);
 	}
@@ -144,7 +146,7 @@ public class ScenicSurvivalProperties {
 
 			SuppressSpawn(boolean enable, String[] allowed) {
 				this.enable = enable;
-				this.allowed = allowed;
+				this.allowed = Arrays.asList(allowed).stream().sorted().collect(Collectors.toList()).toArray(new String[0]);
 			}
 		}
 	}
